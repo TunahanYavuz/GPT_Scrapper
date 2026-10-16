@@ -84,6 +84,7 @@ SQLite dosyası kampanya metaverisi ve çalıştırma durumlarını saklar. Ham 
     app/main.py        FastAPI UI/API, çalışma kilidi ve orkestrasyon
     app/config.py      Ortam değişkenleri ve yollar
     app/models.py      Pydantic veri sözleşmeleri + URL/selector doğrulaması
+    app/path_guard.py Bilinen internet şubesi/hesap yolu koruması
     app/browser.py     Loopback CDP bağlantısı ve isteğe bağlı tarayıcı başlatma
     app/scraper.py     Sayfa gezintisi, erişim-kontrolü tespiti, CSS/genel çıkarım
     app/storage.py     SQLite, tekilleştirme ve geçmiş
