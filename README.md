@@ -8,7 +8,7 @@ Açık ve herkese açık banka kampanya sayfalarından bilgileri **salt-okunur**
 
 - FastAPI tabanlı yerel web arayüzü: banka kaynağı ekleme, etkin/pasif yapma, scrape çalıştırma, son çalıştırmaları ve bulunan kampanyaları görüntüleme.
 - Playwright Chromium entegrasyonu: Chrome veya Brave gibi Chromium tarayıcılarına yalnızca loopback CDP portundan bağlanma; istenirse açıkça yapılandırılmış tarayıcı + profil yolu ile başlatma.
-- Kaynak başına CSS seçicileri (kart, başlık, açıklama, link, başlangıç/bitiş tarihi) yapılandırma.
+- Kaynak başına CSS seçicileri (kart, başlık, açıklama, link, başlangıç/bitiş tarihi ve sonraki sayfa) yapılandırma.
 - SQLite ile kalıcı kayıt, URL/başlık bazlı tekilleştirme, çalıştırma geçmişi ve hata durumları.
 - JSON/CSV dışa aktarma.
 - Zaman aşımı, sayfa/öğe limitleri, alan adı kontrolü, eşzamanlı çalıştırma kilidi, hata izolasyonu ve temel testler.
@@ -50,7 +50,7 @@ Brave için BROWSER_EXECUTABLE değerini Brave yürütülebilir dosyasına ayarl
 - BROWSER_CDP_PORT: varsayılan 9222.
 - AUTO_LAUNCH_BROWSER=true: CDP endpoint bulunmuyorsa yapılandırılmış tarayıcıyı başlatmayı dene.
 
-Uygulama yalnızca 127.0.0.1 / localhost CDP endpoint'lerine bağlanır. Uzak ağlara debugging portu açmayın. Tarayıcı profilleri oturum çerezleri içerebilir; profil klasörünü Git'e eklemeyin, paylaşmayın veya yedek çıktılara koymayın. Güvenlik için ayrı, oturum açılmamış profil kullanılması tavsiye edilir.
+Mevcut kullanıcı profilini kullanmak için Chrome/Brave'i tamamen kapatın; .env içinde BROWSER_USER_DATA_DIR değerini mevcut User Data dizinine (ör. Chrome için %LOCALAPPDATA%\\Google\\Chrome\\User Data), BROWSER_PROFILE_DIRECTORY değerini profil klasörüne (ör. Default veya Profile 1), AUTO_LAUNCH_BROWSER=true ve BROWSER_EXECUTABLE değerini tarayıcı uygulama yoluna ayarlayın. Aynı profil başka bir tarayıcı süreci tarafından kullanılıyorsa başlatma başarısız olabilir. Kişisel profil oturum çerezleri taşıdığından ilk denemede ayrı profil kullanmak daha güvenlidir. Scraper çerezleri dışa aktarmaz veya okumaz; fakat bağlandığı tarayıcı bağlamı profilin mevcut oturumuyla açık sayfaları yükleyebilir. Uygulama yalnızca 127.0.0.1 / localhost CDP endpoint'lerine bağlanır; debugging portunu uzak ağlara açmayın ve profil klasörünü Git'e eklemeyin/paylaşmayın.
 
 ## Kaynak ekleme
 
@@ -60,7 +60,9 @@ Panelde Banka ekle formundan kampanya liste sayfası URL'sini girin. Siteye gör
 - Başlık: h2
 - Açıklama: .campaign-description
 - Link: a
+- Başlangıç tarihi: .campaign-start-date
 - Son tarih: .campaign-end-date
+- Sonraki sayfa: a.next-page (opsiyonel; boşsa a[rel=next] denenir)
 
 Seçiciler her bankanın HTML yapısına göre değişir. Önce hedef sayfayı normal tarayıcıda inceleyip doğru seçicileri belirleyin. Seçici boş bırakılırsa genel çıkarım denenir; genel çıkarımın kusursuz olması beklenmemelidir. Üretimde her banka için küçük, özel bir adapter veya doğrulanmış seçiciler kullanın. Tarihler ham metin olarak korunur.
 
