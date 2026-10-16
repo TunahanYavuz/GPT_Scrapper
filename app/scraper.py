@@ -9,6 +9,7 @@ from playwright.async_api import BrowserContext, Page
 
 from app import config
 from app.models import CampaignRecord, Source, normalize_space, validate_public_http_url
+from app.path_guard import looks_like_private_banking_area
 from app.storage import campaign_hash, make_campaign_id
 
 
@@ -161,6 +162,8 @@ async def scrape_source(context: BrowserContext, source: Source) -> list[Campaig
         return []
 
     validate_public_http_url(source.campaign_url, resolve_host=True)
+    if looks_like_private_banking_area(source.campaign_url):
+        raise PageBlockedError("URL internet şubesi/hesap alanına benziyor; herkese açık kampanya liste sayfası kullanın.")
     original = urlparse(source.campaign_url)
     original_host = (original.hostname or "").lower()
     page = await context.new_page()
@@ -173,6 +176,8 @@ async def scrape_source(context: BrowserContext, source: Source) -> list[Campaig
         final = urlparse(page.url)
         if final.scheme not in {"http", "https"} or (final.hostname or "").lower() != original_host:
             raise PageBlockedError("Sayfa farklı bir hosta yönlendi; güvenlik için gezinme durduruldu.")
+        if looks_like_private_banking_area(page.url):
+            raise PageBlockedError("Yönlendirme internet şubesi/hesap alanına gitti; içerik çıkarımı durduruldu.")
         gate_message = await _is_access_gate(page, response.status if response else None)
         if gate_message:
             raise PageBlockedError(gate_message)
@@ -202,6 +207,8 @@ async def scrape_source(context: BrowserContext, source: Source) -> list[Campaig
                     raise PageBlockedError(f"Sonraki sayfa HTTP {response.status} döndürdü.")
                 if (urlparse(page.url).hostname or "").lower() != original_host:
                     raise PageBlockedError("Sayfalama farklı bir hosta yönlendi.")
+                if looks_like_private_banking_area(page.url):
+                    raise PageBlockedError("Sayfalama bir hesap/portal alanına yönlendi; tarama durduruldu.")
                 gate_message = await _is_access_gate(page, response.status if response else None)
                 if gate_message:
                     raise PageBlockedError(gate_message)
