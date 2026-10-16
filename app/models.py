@@ -11,7 +11,8 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, field_validator
 
 
-def validate_public_http_url(value: str) -> str:
+def validate_public_http_url(value: str, *, resolve_host: bool = False) -> str:
+    """Validate URL syntax; optionally resolve and reject private DNS targets at scrape time."""
     value = value.strip()
     parsed = urlparse(value)
     if parsed.scheme not in {"http", "https"}:
@@ -24,14 +25,15 @@ def validate_public_http_url(value: str) -> str:
     try:
         ip = ipaddress.ip_address(host)
     except ValueError:
-        try:
-            answers = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80))
-        except socket.gaierror:
-            answers = []
-        for answer in answers:
-            resolved = ipaddress.ip_address(answer[4][0])
-            if not resolved.is_global:
-                raise ValueError("Hostname özel veya loopback bir IP adresine çözülüyor.")
+        if resolve_host:
+            try:
+                answers = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80))
+            except socket.gaierror as exc:
+                raise ValueError("Hostname çözümlenemedi; tarama güvenlik için durduruldu.") from exc
+            for answer in answers:
+                resolved = ipaddress.ip_address(answer[4][0])
+                if not resolved.is_global:
+                    raise ValueError("Hostname özel veya loopback bir IP adresine çözülüyor.")
     else:
         if not ip.is_global:
             raise ValueError("Özel, loopback veya ayrılmış IP adreslerine izin verilmez.")
