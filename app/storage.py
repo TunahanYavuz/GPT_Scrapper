@@ -91,18 +91,32 @@ class Storage:
             )
 
     def save_campaigns(self, items: Iterable[CampaignRecord]) -> int:
-        saved = 0
+        """Upsert current facts but return only the count of brand-new keys."""
+        inserted = 0
         with self.connection() as conn:
             for item in items:
-                cursor = conn.execute(
-                    """INSERT OR IGNORE INTO campaigns
+                existing = conn.execute(
+                    "SELECT 1 FROM campaigns WHERE source_id=? AND content_hash=?",
+                    (item.source_id, item.content_hash),
+                ).fetchone()
+                conn.execute(
+                    """INSERT INTO campaigns
                     (id, source_id, bank_name, title, description, url, start_date,
                      end_date, scraped_at, content_hash)
-                    VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                    VALUES(?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(source_id, content_hash) DO UPDATE SET
+                      bank_name=excluded.bank_name,
+                      title=excluded.title,
+                      description=excluded.description,
+                      url=excluded.url,
+                      start_date=excluded.start_date,
+                      end_date=excluded.end_date,
+                      scraped_at=excluded.scraped_at""",
                     tuple(getattr(item, column) for column in CAMPAIGN_COLUMNS),
                 )
-                saved += max(0, cursor.rowcount)
-        return saved
+                if existing is None:
+                    inserted += 1
+        return inserted
 
     def campaigns(self, limit: int = 500, source_id: str | None = None) -> list[dict[str, Any]]:
         limit = max(1, min(2000, limit))
