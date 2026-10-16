@@ -47,6 +47,7 @@ class Selectors(BaseModel):
     link: str = Field(default="a", max_length=300)
     start_date: str = Field(default="", max_length=300)
     end_date: str = Field(default="", max_length=300)
+    next_page: str = Field(default="", max_length=300)
 
 
 class SourceCreate(BaseModel):
