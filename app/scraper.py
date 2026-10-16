@@ -160,7 +160,7 @@ async def scrape_source(context: BrowserContext, source: Source) -> list[Campaig
     if not source.active:
         return []
 
-    validate_public_http_url(source.campaign_url)
+    validate_public_http_url(source.campaign_url, resolve_host=True)
     original = urlparse(source.campaign_url)
     original_host = (original.hostname or "").lower()
     page = await context.new_page()
