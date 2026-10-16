@@ -6,9 +6,10 @@ import hashlib
 import io
 import json
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from app.models import CampaignRecord
 
@@ -26,12 +27,21 @@ class Storage:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(self.path, timeout=10)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
         return conn
 
+    @contextmanager
+    def connection(self) -> Iterator[sqlite3.Connection]:
+        conn = self.connect()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
     def init(self) -> None:
-        with self.connect() as conn:
+        with self.connection() as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS campaigns (
                     id TEXT PRIMARY KEY,
@@ -62,7 +72,7 @@ class Storage:
             """)
 
     def create_run(self, run_id: str, sources_total: int) -> None:
-        with self.connect() as conn:
+        with self.connection() as conn:
             conn.execute(
                 "INSERT INTO runs(id, started_at, status, sources_total) VALUES(?,?,?,?)",
                 (run_id, datetime.now(timezone.utc).isoformat(), "running", sources_total),
@@ -72,7 +82,7 @@ class Storage:
         found = sum(int(item.get("found", 0)) for item in details)
         saved = sum(int(item.get("saved", 0)) for item in details)
         ok = sum(1 for item in details if item.get("status") == "success")
-        with self.connect() as conn:
+        with self.connection() as conn:
             conn.execute(
                 """UPDATE runs SET finished_at=?, status=?, sources_ok=?,
                    campaigns_found=?, campaigns_saved=?, details_json=? WHERE id=?""",
@@ -82,7 +92,7 @@ class Storage:
 
     def save_campaigns(self, items: Iterable[CampaignRecord]) -> int:
         saved = 0
-        with self.connect() as conn:
+        with self.connection() as conn:
             for item in items:
                 cursor = conn.execute(
                     """INSERT OR IGNORE INTO campaigns
@@ -96,7 +106,7 @@ class Storage:
 
     def campaigns(self, limit: int = 500, source_id: str | None = None) -> list[dict[str, Any]]:
         limit = max(1, min(2000, limit))
-        with self.connect() as conn:
+        with self.connection() as conn:
             if source_id:
                 rows = conn.execute(
                     "SELECT * FROM campaigns WHERE source_id=? ORDER BY scraped_at DESC LIMIT ?",
@@ -110,7 +120,7 @@ class Storage:
 
     def runs(self, limit: int = 30) -> list[dict[str, Any]]:
         limit = max(1, min(200, limit))
-        with self.connect() as conn:
+        with self.connection() as conn:
             rows = conn.execute("SELECT * FROM runs ORDER BY started_at DESC LIMIT ?", (limit,)).fetchall()
         result = []
         for row in rows:
@@ -124,7 +134,7 @@ class Storage:
         return result
 
     def stats(self) -> dict[str, int]:
-        with self.connect() as conn:
+        with self.connection() as conn:
             campaign_count = conn.execute("SELECT COUNT(*) FROM campaigns").fetchone()[0]
             run_count = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
         return {"campaigns": campaign_count, "runs": run_count}
