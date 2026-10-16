@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "id": "example-public-campaign-page",
+      "bank_name": "Örnek Banka (değiştirin)",
+      "campaign_url": "https://example.com/campaigns",
+      "active": false,
+      "selectors": {
+        "card": "article",
+        "title": "h2",
+        "description": "p",
+        "link": "a",
+        "start_date": "",
+        "end_date": ""
+      }
+    }
+  ]
+}
