@@ -77,6 +77,7 @@
                 <div class="field"><label for="linkSelector">Kampanya bağlantısı</label><input id="linkSelector" placeholder="a" value="a"></div>
                 <div class="field"><label for="startSelector">Başlangıç tarihi</label><input id="startSelector" placeholder=".start-date"></div>
                 <div class="field"><label for="endSelector">Bitiş tarihi</label><input id="endSelector" placeholder=".end-date"></div>
+                <div class="field full"><label for="nextSelector">Sonraki sayfa bağlantısı (isteğe bağlı)</label><input id="nextSelector" placeholder="a.next-page"></div>
               </div>
               <div class="form-footer"><button type="reset" class="btn">Temizle</button><button class="btn btn-primary" type="submit">Kaynağı kaydet <span aria-hidden="true">→</span></button></div>
             </form>
@@ -193,7 +194,8 @@
           description: $("descriptionSelector").value.trim(),
           link: $("linkSelector").value.trim() || "a",
           start_date: $("startSelector").value.trim(),
-          end_date: $("endSelector").value.trim()
+          end_date: $("endSelector").value.trim(),
+          next_page: $("nextSelector").value.trim()
         }
       };
       const submit = event.submitter;
