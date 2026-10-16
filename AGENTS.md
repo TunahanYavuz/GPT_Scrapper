@@ -15,6 +15,7 @@ Use the site's published terms and reasonable request pacing. Treat scraped cont
 - app/main.py — local FastAPI routes, source registry, local-request guard, scrape lock and run orchestration.
 - app/config.py — environment configuration and paths.
 - app/models.py — Pydantic contracts, selectors and URL validation.
+- app/path_guard.py — conservative checks for known login/internet-branch/account URL segments.
 - app/browser.py — attaches to loopback CDP or starts a configured Chromium browser; closes only processes it launched.
 - app/scraper.py — one-source-at-a-time navigation, access-gate detection, bounded same-host pagination and extraction.
 - app/storage.py — SQLite schema, deduplication, run history and CSV/JSON export.
