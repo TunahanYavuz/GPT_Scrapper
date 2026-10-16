@@ -59,7 +59,7 @@ class LocalOnlyMiddleware(BaseHTTPMiddleware):
             client_is_local = ipaddress.ip_address(client_host).is_loopback
         except ValueError:
             client_is_local = client_host == "testclient"
-        host_header = request.headers.get("host", "").split(":")[0].strip("[]").lower()
+        host_header = (urlparse("//" + request.headers.get("host", "")).hostname or "").lower()
         allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
         if not client_is_local or host_header not in allowed_hosts:
             return Response("Bu uygulama yalnızca yerel kullanım içindir.", status_code=403)
@@ -182,16 +182,18 @@ async def run_scrape():
         raise HTTPException(status_code=409, detail="Bir tarama zaten çalışıyor.")
     await scrape_lock.acquire()
     run_id = uuid.uuid4().hex
-    active_sources = [source for source in load_sources() if source.active]
-    storage.create_run(run_id, len(active_sources))
     details: list[dict] = []
     session = BrowserSession()
-    overall_status = "success"
+    run_created = False
+    overall_status = "failed"
     try:
+        active_sources = [source for source in load_sources() if source.active]
+        storage.create_run(run_id, len(active_sources))
+        run_created = True
         if not active_sources:
-            overall_status = "failed"
-            return {"run_id": run_id, "status": overall_status, "details": [],
-                    "message": "Etkin kaynak bulunamadı. Önce bir kampanya URL'si ekleyip etkinleştirin."}
+            message = "Etkin kaynak bulunamadı. Önce bir kampanya URL'si ekleyip etkinleştirin."
+            storage.finish_run(run_id, "failed", [])
+            return {"run_id": run_id, "status": "failed", "details": [], "message": message}
         try:
             context = await session.start()
         except Exception as exc:
@@ -233,8 +235,8 @@ async def run_scrape():
         storage.finish_run(run_id, overall_status, details)
         return {"run_id": run_id, "status": overall_status, "details": details}
     except Exception:
-        overall_status = "failed"
-        storage.finish_run(run_id, overall_status, details)
+        if run_created:
+            storage.finish_run(run_id, "failed", details)
         raise
     finally:
         await session.close()
