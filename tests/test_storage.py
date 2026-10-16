@@ -22,10 +22,14 @@ def test_campaign_storage_deduplicates_and_exports(tmp_path: Path):
 
     assert storage.save_campaigns([sample_campaign()]) == 1
     assert storage.save_campaigns([sample_campaign()]) == 0
+    refreshed = sample_campaign().model_copy(update={"title": "Market kampanyası güncellendi", "description": "Yeni şartlar"})
+    assert storage.save_campaigns([refreshed]) == 0
     rows = storage.campaigns()
     assert len(rows) == 1
     assert rows[0]["bank_name"] == "Örnek Banka"
-    assert "Market alışverişine indirim" in storage.export_json()
+    assert rows[0]["title"] == "Market kampanyası güncellendi"
+    assert rows[0]["description"] == "Yeni şartlar"
+    assert "Market kampanyası güncellendi" in storage.export_json()
     assert "title" in storage.export_csv()
 
 
