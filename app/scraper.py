@@ -202,6 +202,8 @@ async def scrape_source(context: BrowserContext, source: Source) -> list[Campaig
                     break
                 if next_link == page.url:
                     break
+                if looks_like_private_banking_area(next_link):
+                    raise PageBlockedError("Sonraki sayfa bir hesap/portal alanına benziyor; tarama durduruldu.")
                 response = await page.goto(next_link, wait_until="domcontentloaded")
                 if response is not None and response.status in {401, 403, 407, 429}:
                     raise PageBlockedError(f"Sonraki sayfa HTTP {response.status} döndürdü.")
